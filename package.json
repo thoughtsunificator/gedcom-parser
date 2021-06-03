@@ -1,5 +1,5 @@
 {
-	"name": "gedcom-parser",
+	"name": "@thoughtsunificator/gedcom-parser",
 	"version": "1.0.0",
 	"description": "Tiny GEDCOM parser",
 	"type": "module",
