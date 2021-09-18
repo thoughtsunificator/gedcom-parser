@@ -1,6 +1,6 @@
 {
 	"name": "@thoughtsunificator/gedcom-parser",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"description": "Tiny GEDCOM parser",
 	"main": "index.js",
 	"type": "module",
