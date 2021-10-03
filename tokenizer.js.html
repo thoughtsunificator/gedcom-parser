@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>tokenizer.js - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    <input type="text" id="nav-search" placeholder="Search" />
+    
+    <h2><a href="index.html">Home</a></h2><h2><a href="https://github.com/thoughtsunificator/gedcom-parser" target="_blank" >Github</a></h2><h3>Classes</h3><ul><li><a href="module-record-Record.html">Record</a><ul class='methods'><li data-type='method'><a href="module-record-Record.html#appendChild">appendChild</a></li></ul></li><li><a href="module-token-Token.html">Token</a></li></ul><h3>Modules</h3><ul><li><a href="module-parser.html">parser</a><ul class='methods'><li data-type='method'><a href="module-parser.html#~tokenize">tokenize</a></li><li data-type='method'><a href="module-parser.html#~parse">parse</a></li></ul></li><li><a href="module-record.html">record</a></li><li><a href="module-token.html">token</a></li><li><a href="module-tokenizer.html">tokenizer</a><ul class='methods'><li data-type='method'><a href="module-tokenizer.html#~tokenize">tokenize</a></li></ul></li></ul>
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">tokenizer.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/** @module tokenizer */
+
+import Token from "./token.js"
+
+const CURSOR_INITIAL = "CURSOR_INITIAL"
+const CURSOR_LEVEL = "CURSOR_LEVEL"
+const CURSOR_TOKEN_SEPARATOR = "CURSOR_TOKEN_SEPARATOR"
+const CURSOR_IDENTIFIER = "CURSOR_IDENTIFIER"
+const CURSOR_REFERENCE = "CURSOR_REFERENCE"
+const CURSOR_INFORMATION = "CURSOR_INFORMATION"
+const CURSOR_LINE_FEED = "CURSOR_LINE_FEED"
+
+const DIGITS = "0123456789"
+
+const TOKENS_SEPARATOR_CHARACTER = " "
+const END_OF_LINE_CHARACTERS = ["\r", "\n", "\r\n", "\n\r"]
+const LEVEL_CHARACTERS = [ ...DIGITS ]
+
+/**
+ * @param   {string} str
+ * @returns {Token[]}
+ */
+function tokenize(str) {
+	const characters = [...str]
+	const tokens = []
+	let cursor = CURSOR_INITIAL
+	let nextCursor = null
+	const lineTokens = []
+	let buffer = ""
+	let token = null
+
+	for(const [index, character] of characters.entries()) {
+
+		buffer += character
+
+		if(nextCursor !== null) {
+			cursor = nextCursor
+		}
+
+		let nextCharacter = null
+		if(index + 1 &lt;= characters.length - 1) {
+			nextCharacter = characters[index + 1]
+		}
+
+		let lastLineToken = null
+		if(lineTokens.length >= 1) {
+			lastLineToken = lineTokens[lineTokens.length - 1]
+		}
+		if(nextCharacter === null) {
+			nextCursor = null
+		} else if(nextCharacter === TOKENS_SEPARATOR_CHARACTER &amp;&amp; cursor !== CURSOR_INFORMATION &amp;&amp; !(cursor === CURSOR_TOKEN_SEPARATOR &amp;&amp; lineTokens.find(token_ => token_.name === Token.NAME_IDENTIFIER))) {
+			nextCursor = CURSOR_TOKEN_SEPARATOR
+		} else if(END_OF_LINE_CHARACTERS.includes(nextCharacter)) {
+			nextCursor = CURSOR_LINE_FEED
+		} else {
+			if(cursor === CURSOR_INITIAL || (cursor === CURSOR_TOKEN_SEPARATOR &amp;&amp; !lineTokens.find(token_ => token_.name === Token.NAME_LEVEL))) {
+				nextCursor = CURSOR_LEVEL
+			} else if(cursor === CURSOR_TOKEN_SEPARATOR) {
+				let buffer_ = ""
+				for(const character_ of characters.slice(index + 1)) {
+					if(character_ === TOKENS_SEPARATOR_CHARACTER || END_OF_LINE_CHARACTERS.includes(character_)) {
+						break
+					}
+					buffer_ += character_
+				}
+				if(buffer_.slice(0, 1) === "@" &amp;&amp; buffer_.slice(-1) === "@") {
+					nextCursor = CURSOR_REFERENCE
+				} else if(lineTokens.find(token_ => token_.name === Token.NAME_IDENTIFIER)) {
+					nextCursor = CURSOR_INFORMATION
+				} else {
+					nextCursor = CURSOR_IDENTIFIER
+				}
+			} else if(cursor === CURSOR_IDENTIFIER || cursor === CURSOR_REFERENCE) {
+				if(nextCharacter === TOKENS_SEPARATOR_CHARACTER) {
+					nextCursor = CURSOR_TOKEN_SEPARATOR
+				}
+			} else if(cursor === CURSOR_LINE_FEED) {
+				nextCursor = CURSOR_LEVEL
+			}
+		}
+
+		if((cursor === CURSOR_INITIAL || cursor === CURSOR_LEVEL) &amp;&amp; buffer.trim().length >= 1 &amp;&amp; nextCursor === CURSOR_TOKEN_SEPARATOR) {
+			let buffer_ = ""
+			for(const character_ of characters.slice(index + 1)) {
+				if(END_OF_LINE_CHARACTERS.includes(character_)) {
+					break
+				}
+				if(character_ !== TOKENS_SEPARATOR_CHARACTER) {
+					buffer_ += character_
+				}
+			}
+			if([...buffer.trimStart()].filter(char => LEVEL_CHARACTERS.includes(char)).length === buffer.trimStart().length &amp;&amp; buffer_.length >= 1) {
+				token = new Token(Token.NAME_LEVEL, buffer.trimStart(), index - buffer.trimStart().length + 1)
+			} else {
+				buffer = ""
+			}
+		} else if(cursor === CURSOR_TOKEN_SEPARATOR &amp;&amp; buffer === TOKENS_SEPARATOR_CHARACTER) {
+			if(lineTokens.length >= 1 &amp;&amp; (tokens.length === 0 || tokens[tokens.length - 1].name !== Token.NAME_SEPARATOR) &amp;&amp; lineTokens.length &lt; 5 &amp;&amp; nextCharacter !== null &amp;&amp; !END_OF_LINE_CHARACTERS.includes(nextCharacter)) {
+				token = new Token(Token.NAME_SEPARATOR, character, index)
+			} else {
+				buffer = ""
+			}
+		} else if(cursor === CURSOR_IDENTIFIER &amp;&amp; nextCursor !== CURSOR_IDENTIFIER) {
+			if(lineTokens.length >= 2 &amp;&amp; lineTokens.length &lt; 5) {
+				token = new Token(Token.NAME_IDENTIFIER, buffer.trim(), index - buffer.length + 1)
+			} else {
+				buffer = ""
+			}
+		} else if(cursor === CURSOR_REFERENCE &amp;&amp; nextCursor !== CURSOR_REFERENCE) {
+			if(lineTokens.length >= 2 &amp;&amp; lineTokens.length &lt; 5 &amp;&amp; buffer.slice(0, 1) === "@" &amp;&amp; buffer.slice(-1) === "@") {
+				token = new Token(Token.NAME_REFERENCE, buffer.trim(), index - buffer.length + 1)
+			} else {
+				buffer = ""
+			}
+		} else if(cursor === CURSOR_INFORMATION &amp;&amp; (nextCursor !== CURSOR_INFORMATION || nextCharacter === null)) {
+			if(lineTokens.length >= 3 &amp;&amp; lineTokens.length &lt; 5) {
+				token = new Token(Token.NAME_INFORMATION, buffer, index - buffer.length + 1)
+			} else {
+				buffer = ""
+			}
+		} else if(cursor === CURSOR_LINE_FEED) {
+			if(END_OF_LINE_CHARACTERS.includes(buffer) &amp;&amp; (tokens.length === 0 || tokens[tokens.length - 1].name !== Token.NAME_LINE_FEED)) {
+				token = new Token(Token.NAME_LINE_FEED, buffer, index)
+			} else {
+				buffer = ""
+			}
+		}
+
+		if(token !== null) {
+			tokens.push(token)
+			lineTokens.push(token)
+			token = null
+			buffer = ""
+		}
+
+		if(cursor === CURSOR_LINE_FEED) {
+			lastLineToken = null
+			lineTokens.splice(0, lineTokens.length)
+		}
+
+	}
+
+	return tokens
+}
+
+export {
+	tokenize
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.6</a> on Sun Oct 03 2021 13:21:25 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+<script src="scripts/search.js" defer></script>
+
+
+
+</body>
+</html>
