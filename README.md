@@ -1,4 +1,4 @@
-# gedcom-parser [![Build Status](https://travis-ci.com/thoughtsunificator/gedcom-parser.svg?branch=master)](https://travis-ci.com/thoughtsunificator/gedcom-parser)
+# gedcom-parser
 
 Tiny GEDCOM parser.
 
