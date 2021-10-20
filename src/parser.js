@@ -55,7 +55,7 @@ function parse(str) {
 			parentFlatRecords.reverse()
 			const parentFlatRecord = parentFlatRecords.find(flatRecord_ => flatRecord_.level === flatRecord.level - 1)
 			if(parentFlatRecord) {
-				parentFlatRecord.record.records.push(flatRecord.record)
+				parentFlatRecord.record.appendChild(flatRecord.record)
 			}
 		}
 	}
