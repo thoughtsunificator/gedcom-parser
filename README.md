@@ -37,7 +37,7 @@ const records = Parser.parse(`0 HEAD
 
 ## API
 
-See [https://thoughtsunificator.github.io/gedcom-parser](https://thoughtsunificator.github.io/gedcom-parser).
+See [http://gedcom-parser.unificator.me](http://gedcom-parser.unificator.me).
 
 ## Try it out!
 
